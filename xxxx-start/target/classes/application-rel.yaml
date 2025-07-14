@@ -1,0 +1,27 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: assetSchool.con
+
+  datasource:
+    url: jdbc:mysql://localhost:33006/school_db
+    username: root
+    password: root
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    type: com.zaxxer.hikari.HikariDataSource
+
+    hikari:
+      maximum-pool-size: 10   # Số lượng tối đa kết nối
+      minimum-idle: 5         # Số lượng kết nối tối thiểu trong pool
+
+  jpa:
+    database: mysql
+    show-sql: true
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+        use_sql_comments: true
