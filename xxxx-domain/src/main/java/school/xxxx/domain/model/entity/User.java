@@ -34,7 +34,7 @@ public class User {
     @Column(name = "address", length = 255, nullable = true)
     private String address;
 
-    @Column(name = "state", nullable = false)
+    @Column(name = "state", nullable = false, columnDefinition = "boolean default false")
     private Boolean state;
 
     @CreationTimestamp

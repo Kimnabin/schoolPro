@@ -10,10 +10,10 @@
     <packaging>pom</packaging>
     <modules>
         <module>xxxx-controller</module>
-        <module>xxxx-infrastructure</module>
         <module>xxxx-domain</module>
-        <module>xxxx-application</module>
         <module>xxxx-start</module>
+        <module>xxxx-infrastructure</module>
+        <module>xxxx-application</module>
     </modules>
 
     <properties>
@@ -27,12 +27,13 @@
             <dependency>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-dependencies</artifactId>
-                <version>4.0.0-SNAPSHOT</version>
+                <version>3.2.4</version> <!-- hoặc 3.2.5, tùy bản mới nhất -->
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
         </dependencies>
     </dependencyManagement>
+
 
     <dependencies>
         <dependency>
