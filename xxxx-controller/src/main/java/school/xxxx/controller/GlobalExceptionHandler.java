@@ -1,4 +1,4 @@
-package school.xxxx.controller.exception;
+package school.xxxx.controller;
 
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
@@ -15,16 +15,17 @@ import school.xxxx.controller.model.enums.ResultCode;
 import school.xxxx.controller.model.enums.ResultUtil;
 import school.xxxx.controller.model.vo.ResultMessage;
 
-
 import java.util.HashMap;
 import java.util.Map;
 
-@RestControllerAdvice
-@Slf4j
+@RestControllerAdvice // Đánh dấu đây là class xử lý ngoại lệ toàn cục cho REST Controller
+@Slf4j              // Tạo sẵn logger để log lỗi hoặc thông tin
 public class GlobalExceptionHandler {
 
     /**
-     * Xử lý lỗi validation cho @Valid
+     * Xử lý lỗi validation với @Valid cho request body (DTO)
+     * Ví dụ: @Valid UserCreateReqDTO
+     * Bắt lỗi MethodArgumentNotValidException khi các trường DTO không hợp lệ
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ResultMessage<Map<String, String>>> handleValidationExceptions(
@@ -32,19 +33,22 @@ public class GlobalExceptionHandler {
         log.error("Validation error: {}", ex.getMessage());
 
         Map<String, String> errors = new HashMap<>();
+        // Lấy từng lỗi field, đưa vào map <field, message>
         ex.getBindingResult().getAllErrors().forEach(error -> {
-            String fieldName = ((FieldError) error).getField();
-            String errorMessage = error.getDefaultMessage();
+            String fieldName = ((FieldError) error).getField();  // Tên trường bị lỗi
+            String errorMessage = error.getDefaultMessage();     // Thông báo lỗi tương ứng
             errors.put(fieldName, errorMessage);
         });
 
+        // Trả về HTTP 400 Bad Request với message lỗi chuẩn theo định dạng ResultMessage
         return ResponseEntity.badRequest()
                 .body(ResultUtil.error(ResultCode.PARAMS_ERROR.code(),
                         "Validation failed: " + errors.toString()));
     }
 
     /**
-     * Xử lý lỗi validation cho @Validated
+     * Xử lý lỗi validation với @Validated cho tham số method (query, path)
+     * Bắt lỗi ConstraintViolationException khi tham số không hợp lệ
      */
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ResultMessage<Map<String, String>>> handleConstraintViolationException(
@@ -52,9 +56,10 @@ public class GlobalExceptionHandler {
         log.error("Constraint violation: {}", ex.getMessage());
 
         Map<String, String> errors = new HashMap<>();
+        // Lấy từng lỗi trong danh sách violations
         for (ConstraintViolation<?> violation : ex.getConstraintViolations()) {
-            String fieldName = violation.getPropertyPath().toString();
-            String errorMessage = violation.getMessage();
+            String fieldName = violation.getPropertyPath().toString(); // Tên tham số
+            String errorMessage = violation.getMessage();               // Thông báo lỗi
             errors.put(fieldName, errorMessage);
         }
 
@@ -64,7 +69,8 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Xử lý lỗi bind
+     * Xử lý lỗi binding dữ liệu đầu vào (ví dụ truyền sai kiểu dữ liệu hoặc định dạng)
+     * Bắt lỗi BindException
      */
     @ExceptionHandler(BindException.class)
     public ResponseEntity<ResultMessage<Map<String, String>>> handleBindException(
@@ -84,7 +90,9 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Xử lý lỗi type mismatch
+     * Xử lý lỗi khi kiểu tham số truyền vào không đúng với kiểu mong đợi
+     * Ví dụ: truyền chuỗi cho một tham số Long
+     * Bắt lỗi MethodArgumentTypeMismatchException
      */
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ResultMessage<String>> handleTypeMismatchException(
@@ -99,7 +107,7 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Xử lý IllegalArgumentException
+     * Xử lý lỗi IllegalArgumentException thường dùng để validate thủ công hoặc logic sai tham số
      */
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ResultMessage<String>> handleIllegalArgumentException(
@@ -111,7 +119,8 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Xử lý RuntimeException
+     * Bắt chung tất cả RuntimeException không được xử lý khác
+     * Trả về lỗi 500 Internal Server Error
      */
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<ResultMessage<String>> handleRuntimeException(
@@ -124,7 +133,8 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Xử lý Exception chung
+     * Bắt chung tất cả Exception không được xử lý khác
+     * Trả về lỗi 500 Internal Server Error
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ResultMessage<String>> handleGenericException(
