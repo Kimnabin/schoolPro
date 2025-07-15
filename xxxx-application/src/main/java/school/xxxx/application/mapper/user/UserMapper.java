@@ -19,7 +19,8 @@ public class UserMapper {
         user.setPassword(dto.getPassword());
         user.setFullName(dto.getFullName());
         user.setEmail(dto.getEmail());
-        user.setPhoneNumber(dto.getPhoneNumber());
+        user.setState(dto.getState());
+        user.setPhoneNumber(Integer.valueOf(dto.getPhoneNumber()));
         user.setAddress(dto.getAddress());
 
         return user;
@@ -55,7 +56,8 @@ public class UserMapper {
 
         UserResponseDTO dto = new UserResponseDTO();
         dto.setId(user.getId());
-        dto.setUsername(user.getUsername());
+//        dto.setUsername(user.getUsername());
+        dto.setFullName(user.getFullName());
         dto.setEmail(user.getEmail());
         dto.setPhoneNumber(user.getPhoneNumber());
         dto.setAddress(user.getAddress());

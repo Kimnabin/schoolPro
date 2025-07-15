@@ -1,77 +1,175 @@
 package school.xxxx.controller.http;
 
+import jakarta.validation.constraints.NotNull;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import school.xxxx.application.model.dto.user.request.UserCreateReqDTO;
+import school.xxxx.application.model.dto.user.request.UserUpdateReqDTO;
 import school.xxxx.application.model.dto.user.response.UserResponseDTO;
 import school.xxxx.application.service.user.UserAppService;
+import school.xxxx.controller.model.enums.ResultCode;
+import school.xxxx.controller.model.enums.ResultUtil;
+import school.xxxx.controller.model.vo.ResultMessage;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.Valid;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("api/v1/users")
+@RequestMapping("/api/v1/users")
+@RequiredArgsConstructor
 @Slf4j
+@Validated
 public class UserController {
 
-    @Autowired
-    private UserAppService userAppService;
+    private final UserAppService userAppService;
 
-    @GetMapping("/allUsers")
-    public ResponseEntity<List<UserResponseDTO>> getAllUsers() {
-        List<UserResponseDTO> users = userAppService.getAllUsers();
-        return ResponseEntity.ok(users);
-    }
-
-    @GetMapping("/getUserById")
-    public ResponseEntity<?> getUserById(@RequestParam Long userId) {
-        if (userId == null) {
-            return ResponseEntity.badRequest().body("User ID cannot be null");
+    /**
+     * Lấy danh sách tất cả người dùng
+     */
+    @GetMapping
+    public ResponseEntity<ResultMessage<List<UserResponseDTO>>> getAllUsers() {
+        try {
+            log.info("Fetching all users");
+            List<UserResponseDTO> users = userAppService.getAllUsers();
+            return ResponseEntity.ok(ResultUtil.zdata(users));
+        } catch (Exception e) {
+            log.error("Error fetching all users", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ResultUtil.error(ResultCode.ERROR));
         }
-        UserResponseDTO user = userAppService.getUserById(userId);
-        return ResponseEntity.ok(user);
     }
 
-    @GetMapping("/getUserByUsername")
-    public ResponseEntity<?> getUserByUsername(@RequestParam String username) {
-        if (username == null || username.isEmpty()) {
-            return ResponseEntity.badRequest().body("Username cannot be null or empty");
+    /**
+     * Lấy thông tin người dùng theo ID
+     */
+    @GetMapping("/{userId}")
+    public ResponseEntity<ResultMessage<UserResponseDTO>> getUserById(
+            @PathVariable @NotNull Long userId) {
+        try {
+            log.info("Fetching user with ID: {}", userId);
+            UserResponseDTO user = userAppService.getUserById(userId);
+            return ResponseEntity.ok(ResultUtil.zdata(user));
+        } catch (Exception e) {
+            log.error("Error fetching user with ID: {}", userId, e);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ResultUtil.error(ResultCode.USER_NOT_FOUND));
         }
-        UserResponseDTO user = userAppService.getUserByUsername(username);
-        return ResponseEntity.ok(user);
     }
 
-    @GetMapping("/getUserByEmail")
-    public ResponseEntity<?> getUserByEmail(@RequestParam String email) {
-        if (email == null || email.isEmpty()) {
-            return ResponseEntity.badRequest().body("Email cannot be null or empty");
+    /**
+     * Lấy thông tin người dùng theo username
+     */
+    @GetMapping("/username/{username}")
+    public ResponseEntity<ResultMessage<UserResponseDTO>> getUserByUsername(
+            @PathVariable("username") @NotBlank String username) {
+        try {
+            log.info("Fetching user with username: {}", username);
+            UserResponseDTO user = userAppService.getUserByUsername(username);
+            return ResponseEntity.ok(ResultUtil.zdata(user));
+        } catch (Exception e) {
+            log.error("Error fetching user with username: {}", username, e);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ResultUtil.error(ResultCode.USER_NOT_FOUND));
         }
-        UserResponseDTO user = userAppService.getUserByEmail(email);
-        return ResponseEntity.ok(user);
     }
 
-    @PostMapping("/createUser")
-    public ResponseEntity<?> createUser(@RequestBody UserCreateReqDTO user) {
-        if (user == null || user.getUsername() == null || user.getEmail() == null) {
-            return ResponseEntity.badRequest().body("User, username, and email cannot be null");
+    /**
+     * Lấy thông tin người dùng theo email
+     */
+    @GetMapping("/email/{email}")
+    public ResponseEntity<ResultMessage<UserResponseDTO>> getUserByEmail(
+            @PathVariable("email") @NotBlank String email) {
+        try {
+            log.info("Fetching user with email: {}", email);
+            UserResponseDTO user = userAppService.getUserByEmail(email);
+            return ResponseEntity.ok(ResultUtil.zdata(user));
+        } catch (Exception e) {
+            log.error("Error fetching user with email: {}", email, e);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ResultUtil.error(ResultCode.USER_NOT_FOUND));
         }
-        UserResponseDTO createdUser = userAppService.createNewUser(user);
-        return ResponseEntity.ok(createdUser);
     }
 
-//    @PutMapping("/updateUser")
-//    public ResponseEntity<?> updateUser(@RequestParam Long userId,
-//                                        @RequestParam String username,
-//                                        @RequestParam String email) {
-//        // Implement update logic in service and return updated user
-//        UserResponseDTO updatedUser = userAppService.updateUser(userId, username, email);
-//        return ResponseEntity.ok(updatedUser);
-//    }
+    /**
+     * Tạo mới người dùng
+     */
+    @PostMapping("createUser")
+    public ResponseEntity<ResultMessage<UserResponseDTO>> createUser(
+            @Valid @RequestBody UserCreateReqDTO userCreateReqDTO) {
+        try {
+            log.info("Creating new user with username: {}", userCreateReqDTO.getUsername());
+            UserResponseDTO createdUser = userAppService.createNewUser(userCreateReqDTO);
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(ResultUtil.zdata(createdUser));
+        } catch (Exception e) {
+            log.error("Error creating user", e);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ResultUtil.error(ResultCode.PARAMS_ERROR));
+        }
+    }
 
-    @DeleteMapping("/deleteUser")
-    public ResponseEntity<?> deleteUser(@RequestParam Long userId) {
-        userAppService.deleteUser(userId);
-        return ResponseEntity.ok("User deleted with ID: " + userId);
+    /**
+     * Cập nhật thông tin người dùng
+     */
+    @PutMapping("/{userId}")
+    public ResponseEntity<ResultMessage<UserResponseDTO>> updateUser(
+            @PathVariable("userId") @NotNull Long userId,
+            @Valid @RequestBody UserUpdateReqDTO userUpdateReqDTO) {
+        try {
+            log.info("Updating user with ID: {}", userId);
+            // Ensure the ID in the path matches the ID in the request body
+            userUpdateReqDTO.setId(userId);
+            UserResponseDTO updatedUser = userAppService.updateUser(userId, userUpdateReqDTO);
+            return ResponseEntity.ok(ResultUtil.zdata(updatedUser));
+        } catch (Exception e) {
+            log.error("Error updating user with ID: {}", userId, e);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ResultUtil.error(ResultCode.USER_NOT_FOUND));
+        }
+    }
+
+    /**
+     * Xóa người dùng theo ID
+     */
+    @DeleteMapping("/{userId}")
+    public ResponseEntity<ResultMessage<String>> deleteUser(
+            @PathVariable("userId") @NotNull Long userId) {
+        try {
+            log.info("Deleting user with ID: {}", userId);
+            userAppService.deleteUser(userId);
+            return ResponseEntity.ok(ResultUtil.zdata("User deleted successfully with ID: " + userId));
+        } catch (Exception e) {
+            log.error("Error deleting user with ID: {}", userId, e);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ResultUtil.error(ResultCode.USER_NOT_FOUND));
+        }
+    }
+
+    /**
+     * Tìm kiếm người dùng với phân trang
+     */
+    @GetMapping("/search")
+    public ResponseEntity<ResultMessage<List<UserResponseDTO>>> searchUsers(
+            @RequestParam(required = false) String username,
+            @RequestParam(required = false) String email,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "id") String sortBy,
+            @RequestParam(defaultValue = "asc") String sortDirection) {
+        try {
+            log.info("Searching users with filters - username: {}, email: {}, page: {}, size: {}",
+                    username, email, page, size);
+            List<UserResponseDTO> users = userAppService.listUsers(username, email, page, size, sortBy, sortDirection);
+            return ResponseEntity.ok(ResultUtil.zdata(users));
+        } catch (Exception e) {
+            log.error("Error searching users", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ResultUtil.error(ResultCode.ERROR));
+        }
     }
 }
