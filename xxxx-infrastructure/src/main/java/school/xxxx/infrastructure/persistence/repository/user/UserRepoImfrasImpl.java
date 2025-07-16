@@ -96,4 +96,5 @@ public class UserRepoImfrasImpl implements UserRepository {
     public boolean existsById(Long id) {
         return userJPAMapper.existsById(id);
     }
+
 }

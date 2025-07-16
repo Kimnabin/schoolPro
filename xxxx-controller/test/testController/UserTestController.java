@@ -68,7 +68,7 @@ public class UserTestController {
             dto.setPassword("TestPass123!");
             dto.setFullName("Test User");
             dto.setEmail("test_" + System.currentTimeMillis() + "@example.com");
-            dto.setPhoneNumber("0123456789");
+            dto.setPhoneNumber("+84123456789");
             dto.setAddress("123 Test Street, Test City");
             dto.setState(true);
 
@@ -101,7 +101,7 @@ public class UserTestController {
                 dto.setPassword("BulkPass123!");
                 dto.setFullName("Bulk User " + i);
                 dto.setEmail("bulk_" + timestamp + "_" + i + "@example.com");
-                dto.setPhoneNumber("012345678" + i);
+                dto.setPhoneNumber("+84" + String.format("%09d", 123456780 + i));
                 dto.setAddress(i + " Bulk Street, Bulk City");
                 dto.setState(i % 2 == 0); // Alternate true/false
 

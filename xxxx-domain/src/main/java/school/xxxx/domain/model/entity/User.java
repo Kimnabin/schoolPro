@@ -29,7 +29,7 @@ public class User {
     private String fullName;
 
     @Column(name = "phone_number", length = 20, unique = true)
-    private Integer phoneNumber;
+    private String phoneNumber;
 
     @Column(name = "address", length = 255, nullable = true)
     private String address;

@@ -18,8 +18,8 @@ public class UserResponseDTO {
     private String email;
     // Email liên hệ của user
 
-    private Integer phoneNumber;
-    // Số điện thoại (hiện dùng Integer => sẽ không lưu được số có dấu "+" hoặc bắt đầu bằng 0 -> nên cân nhắc dùng String)
+    private String phoneNumber;
+    // Số điện thoại của user, có thể null nếu không cung cấp
 
     private String address;
     // Địa chỉ của user

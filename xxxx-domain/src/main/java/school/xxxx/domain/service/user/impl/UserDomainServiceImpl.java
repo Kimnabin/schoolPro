@@ -7,119 +7,158 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
+import school.xxxx.domain.exception.user.UserNotFoundException;
+import school.xxxx.domain.exception.user.UserAlreadyExistsException;
+import school.xxxx.domain.exception.user.InvalidUserDataException;
 import school.xxxx.domain.model.entity.User;
 import school.xxxx.domain.repositoty.user.UserRepository;
 import school.xxxx.domain.service.user.UserDomainService;
 
 import java.util.List;
 
-@Service  // Đánh dấu đây là service component quản lý logic nghiệp vụ domain liên quan User
+@Service
 @RequiredArgsConstructor
 @Slf4j
-@Transactional()  // Chỉ đọc dữ liệu, không thay đổi DB trong các phương thức này
 public class UserDomainServiceImpl implements UserDomainService {
 
-    @Autowired  // Tự động inject implementation của UserRepository
+    @Autowired
     private UserRepository userRepository;
 
-    /**
-     * Lấy người dùng theo ID, nếu không tìm thấy sẽ ném IllegalArgumentException
-     */
-//    @Override
-//    public User getUserById(Long userId) {
-//        return userRepository.findById(userId)
-//                .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + userId));
-//    }
     @Cacheable(value = "users", key = "#id")
     @Override
     public User getUserById(Long id) {
+        if (id == null || id <= 0) {
+            throw new InvalidUserDataException("id", "must be a positive number");
+        }
+
         return userRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + id));
+                .orElseThrow(() -> new UserNotFoundException(id));
     }
 
-    /**
-     * Lấy người dùng theo username, ném lỗi nếu không tìm thấy
-     */
     @Override
     public User getUserByUsername(String username) {
-        return userRepository.findByUsername(username)
-                .orElseThrow(() -> new IllegalArgumentException("User not found with username: " + username));
+        if (username == null || username.trim().isEmpty()) {
+            throw new InvalidUserDataException("username", "cannot be null or empty");
+        }
+
+        return userRepository.findByUsername(username.trim())
+                .orElseThrow(() -> new UserNotFoundException("username", username));
     }
 
-    /**
-     * Lấy người dùng theo email, ném lỗi nếu không tìm thấy
-     */
     @Override
     public User getUserByEmail(String email) {
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException("User not found with email: " + email));
+        if (email == null || email.trim().isEmpty()) {
+            throw new InvalidUserDataException("email", "cannot be null or empty");
+        }
+
+        return userRepository.findByEmail(email.trim().toLowerCase())
+                .orElseThrow(() -> new UserNotFoundException("email", email));
     }
 
-    /**
-     * Lấy danh sách tất cả người dùng
-     */
     @Override
     public List<User> getAllUsers() {
         return userRepository.findAll();
     }
 
-    /**
-     * Tạo mới người dùng bằng cách gọi save của repository
-     */
-//    @Override
-//    public User createUser(User user) {
-//        return userRepository.save(user);
-//    }
-    @Transactional // Only for write operations
+    @Transactional
     @CacheEvict(value = "users", key = "#result.id")
     @Override
     public User createUser(User user) {
+        if (user == null) {
+            throw new InvalidUserDataException("User data cannot be null");
+        }
+
+        // Validate required fields
+        if (user.getUsername() == null || user.getUsername().trim().isEmpty()) {
+            throw new InvalidUserDataException("username", "cannot be null or empty");
+        }
+
+        if (user.getEmail() == null || user.getEmail().trim().isEmpty()) {
+            throw new InvalidUserDataException("email", "cannot be null or empty");
+        }
+
+        // Check for existing username
+        if (userRepository.existsByUsername(user.getUsername().trim())) {
+            throw new UserAlreadyExistsException("username", user.getUsername());
+        }
+
+        // Check for existing email
+        if (userRepository.existsByEmail(user.getEmail().trim().toLowerCase())) {
+            throw new UserAlreadyExistsException("email", user.getEmail());
+        }
+
+        // Normalize data before saving
+        user.setUsername(user.getUsername().trim());
+        user.setEmail(user.getEmail().trim().toLowerCase());
+
+        log.info("Creating new user with username: {}", user.getUsername());
         return userRepository.save(user);
     }
 
-    /**
-     * Cập nhật người dùng:
-     * - Kiểm tra tồn tại user theo id trước khi update
-     * - Nếu không tồn tại, ném RuntimeException
-     * - Nếu tồn tại, gọi save để update (thường save sẽ xử lý insert/update tùy id)
-     */
+    @Transactional
+    @CacheEvict(value = "users", key = "#user.id")
     @Override
     public User updateUser(User user) {
-        if (!userRepository.existsById(user.getId())) {
-            throw new RuntimeException("Cannot update. User not found with id: " + user.getId());
+        if (user == null || user.getId() == null) {
+            throw new InvalidUserDataException("User ID cannot be null for update operation");
         }
+
+        if (!userRepository.existsById(user.getId())) {
+            throw new UserNotFoundException(user.getId());
+        }
+
+        // Check for existing email if email is being changed
+        if (user.getEmail() != null) {
+            User existingUser = userRepository.findById(user.getId()).orElse(null);
+            if (existingUser != null && !existingUser.getEmail().equals(user.getEmail().trim().toLowerCase())) {
+                if (userRepository.existsByEmail(user.getEmail().trim().toLowerCase())) {
+                    throw new UserAlreadyExistsException("email", user.getEmail());
+                }
+            }
+            user.setEmail(user.getEmail().trim().toLowerCase());
+        }
+
+        log.info("Updating user with ID: {}", user.getId());
         return userRepository.save(user);
     }
 
-    /**
-     * Xóa người dùng theo ID
-     */
+    @Transactional
+    @CacheEvict(value = "users", key = "#userId")
     @Override
     public void deleteUser(Long userId) {
+        if (userId == null || userId <= 0) {
+            throw new InvalidUserDataException("id", "must be a positive number");
+        }
+
+        if (!userRepository.existsById(userId)) {
+            throw new UserNotFoundException(userId);
+        }
+
+        log.info("Deleting user with ID: {}", userId);
         userRepository.deleteById(userId);
     }
 
-    /**
-     * Kiểm tra tồn tại user theo username
-     */
     @Override
     public boolean existsByUsername(String username) {
-        return userRepository.existsByUsername(username);
+        if (username == null || username.trim().isEmpty()) {
+            return false;
+        }
+        return userRepository.existsByUsername(username.trim());
     }
 
-    /**
-     * Kiểm tra tồn tại user theo email
-     */
     @Override
     public boolean existsByEmail(String email) {
-        return userRepository.existsByEmail(email);
+        if (email == null || email.trim().isEmpty()) {
+            return false;
+        }
+        return userRepository.existsByEmail(email.trim().toLowerCase());
     }
 
-    /**
-     * Kiểm tra tồn tại user theo ID
-     */
     @Override
     public boolean existsById(Long id) {
+        if (id == null || id <= 0) {
+            return false;
+        }
         return userRepository.existsById(id);
     }
 }

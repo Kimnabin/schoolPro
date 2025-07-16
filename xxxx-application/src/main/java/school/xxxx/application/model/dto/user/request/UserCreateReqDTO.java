@@ -59,8 +59,8 @@ public class UserCreateReqDTO {
     private String email;
 
     @Pattern(
-            regexp = "^\\+?[0-9]{10,15}$",
-            message = "Phone number must be between 10 and 15 digits"
+            regexp = "^(\\+\\d{1,3}[- ]?)?\\d{10,14}$",
+            message = "Phone number must be valid format (10-14 digits, optional country code)"
     )
     // Số điện thoại chỉ chứa số, có thể bắt đầu bằng dấu +, độ dài 10-15 chữ số
     private String phoneNumber;

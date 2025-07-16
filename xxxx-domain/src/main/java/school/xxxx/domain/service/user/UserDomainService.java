@@ -1,7 +1,6 @@
 package school.xxxx.domain.service.user;
 
-import org.hibernate.query.Page;
-import org.springframework.data.domain.Pageable;
+
 import school.xxxx.domain.model.entity.User;
 
 import java.util.List;
