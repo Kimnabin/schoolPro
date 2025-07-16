@@ -30,16 +30,19 @@ public class UserCreateReqDTO {
     // Password bắt buộc không được để trống
     @Size(min = 8, max = 100, message = "Password must be between 8 and 100 characters")
     // Độ dài mật khẩu tối thiểu 8 ký tự, tối đa 100 ký tự
+    // UserCreateReqDTO.java - Better password validation
     @Pattern(
-            regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&].*$",
-            message = "Password must contain at least one uppercase letter, one lowercase letter, one digit, and one special character"
+            regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$",
+            message = "Password must be at least 8 characters with uppercase, lowercase, digit and special character"
     )
+    private String password;
     // Regex yêu cầu mật khẩu có ít nhất:
     // - 1 chữ hoa
     // - 1 chữ thường
     // - 1 chữ số
     // - 1 ký tự đặc biệt (@$!%*?&)
-    private String password;
+    // - Tổng độ dài ít nhất 8 ký tự
+    // Lưu ý: Regex này có thể điều chỉnh tùy theo yêu cầu bảo mật cụ thể
 
     @NotBlank(message = "Full name is required")
     // Họ tên không được bỏ trống

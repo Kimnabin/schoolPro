@@ -9,7 +9,7 @@ import java.util.Date;
 @Entity
 @Table(name = "inventory_check_items")
 // Table chi tiet kiem ke tung tai san, trang thiet bi, vat tu trong moi doi kiem ke
-public class inventoryCheckItems {
+public class InventoryCheckItems {
 
     @Id
     @GeneratedValue(strategy = jakarta.persistence.GenerationType.IDENTITY)
@@ -29,11 +29,11 @@ public class inventoryCheckItems {
 
     @ManyToOne
     @JoinColumn(name = "session_id", nullable = false)
-    private inventoryCheckSession inventoryCheckSession_id;
+    private InventoryCheckSession inventoryCheckSession_id;
 
     @ManyToOne
     @JoinColumn(name = "asset_id", nullable = false)
-    private asset asset_id;
+    private Asset asset_id;
 
     @ManyToOne
     @JoinColumn(name = "checked_by", nullable = false)

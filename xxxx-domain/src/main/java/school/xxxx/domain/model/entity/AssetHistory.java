@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "asset_history")
 // Table ghi lai lich su chuyen giao, thay doi tai san
-public class assetHistory {
+public class AssetHistory {
 
     @Id
     @GeneratedValue(strategy = jakarta.persistence.GenerationType.IDENTITY)
@@ -27,7 +27,7 @@ public class assetHistory {
 
     @ManyToOne
     @JoinColumn(name = "asset_id", nullable = false)
-    private asset asset_id;
+    private Asset asset_id;
 
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
@@ -35,10 +35,10 @@ public class assetHistory {
 
     @ManyToOne
     @JoinColumn(name = "old_department_id")
-    private department oldDepartment;
+    private Department oldDepartment;
 
     @ManyToOne
     @JoinColumn(name = "new_department_id")
-    private department newDepartment;
+    private Department newDepartment;
 
 }

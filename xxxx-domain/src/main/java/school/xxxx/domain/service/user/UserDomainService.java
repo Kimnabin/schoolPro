@@ -79,4 +79,5 @@ public interface UserDomainService {
      * @return true nếu tồn tại, false nếu không
      */
     boolean existsById(Long id);
+
 }

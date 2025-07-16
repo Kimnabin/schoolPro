@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 @Data
 @Table(name = "asset_image")
 // Table luu lai hinh anh tai san
-public class assetImage {
+public class AssetImage {
 
     @Id
     @GeneratedValue(strategy = jakarta.persistence.GenerationType.IDENTITY)
@@ -28,7 +28,7 @@ public class assetImage {
 
     @ManyToOne
     @JoinColumn(name = "asset_id")
-    private asset asset_id; // lien ket den tai san lien quan
+    private Asset asset_id; // lien ket den tai san lien quan
 
     @ManyToOne
     @JoinColumn(name = "uploaded_by")

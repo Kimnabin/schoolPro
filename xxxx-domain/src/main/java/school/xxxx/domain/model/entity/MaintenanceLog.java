@@ -9,7 +9,7 @@ import java.util.Date;
 @Entity
 @Table(name = "maintenance_log")
 // Tabel luu tru thong tin bao tri, sua chua, bao tri tai san
-public class maintenanceLog {
+public class MaintenanceLog {
 
     @Id
     @GeneratedValue(strategy = jakarta.persistence.GenerationType.IDENTITY)
@@ -32,6 +32,6 @@ public class maintenanceLog {
 
     @ManyToOne
     @JoinColumn(name = "asset_id", nullable = false)
-    private asset asset; // lien ket den tai san duoc bao tri
+    private Asset asset; // lien ket den tai san duoc bao tri
 
 }

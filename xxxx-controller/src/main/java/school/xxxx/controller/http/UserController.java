@@ -52,7 +52,7 @@ public class UserController {
      */
     @GetMapping("/{userId}")
     public ResponseEntity<ResultMessage<UserResponseDTO>> getUserById(
-            @PathVariable @NotNull Long userId) {
+            @PathVariable("userId") @NotNull Long userId) {
         try {
             log.info("Fetching user with ID: {}", userId);
             UserResponseDTO user = userAppService.getUserById(userId);

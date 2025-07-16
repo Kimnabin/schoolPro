@@ -7,7 +7,7 @@ import lombok.Data;
 @Entity
 @Table(name = "role")
 // Table danh sach cac vai tro trong he thong, phuc vu viec phan quyen
-public class role {
+public class Role {
 
     @Id
     @GeneratedValue(strategy = jakarta.persistence.GenerationType.IDENTITY)

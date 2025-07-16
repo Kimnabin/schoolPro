@@ -1,6 +1,10 @@
 package school.xxxx.infrastructure.persistence.mapper.user;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import school.xxxx.domain.model.entity.User;
 
 import java.util.List;
@@ -43,4 +47,17 @@ public interface UserJPAMapper extends JpaRepository<User, Long> {
      * @return true nếu tồn tại user với email đó, false nếu không
      */
     boolean existsByEmail(String email);
+
+    // UserJPAMapper.java - Thêm queries tối ưu
+    @Query("SELECT u FROM User u WHERE u.username = :username AND u.state = true")
+    Optional<User> findActiveByUsername(@Param("username") String username);
+
+    @Query("SELECT u FROM User u WHERE (:username IS NULL OR u.username LIKE %:username%) " +
+            "AND (:email IS NULL OR u.email LIKE %:email%)")
+    Page<User> findUsersWithFilters(@Param("username") String username,
+                                    @Param("email") String email,
+                                    Pageable pageable);
+
+
+
 }

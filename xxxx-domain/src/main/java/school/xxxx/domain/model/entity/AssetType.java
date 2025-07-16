@@ -5,17 +5,20 @@ import lombok.Data;
 
 @Entity
 @Data
-@Table(name = "department")
-// vi tri cua phong ban, lop hoc, khoa noi luu giu, su dung tai san
-public class department {
+@Table(name = "asset_type")
+// Table liet ke loai tai san
+public class AssetType {
 
     @Id
     @GeneratedValue(strategy = jakarta.persistence.GenerationType.IDENTITY)
     private Long id;
 
     @Column(name = "name", nullable = false, length = 100, unique = true)
-    private String nameDepartment;
+    private String assetTypeName;
 
-    @Column(name = "location", length = 255, nullable = false, unique = true)
-    private String location;
+    @Column(name = "description", length = 255, nullable = true)
+    private String description;
+
+
+
 }

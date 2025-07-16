@@ -11,7 +11,7 @@ import java.util.Date;
 @Entity
 @Table(name = "asset")
 // Table thong tin tung tai san cu the
-public class asset {
+public class Asset {
 
     @Id
     @GeneratedValue(strategy = jakarta.persistence.GenerationType.IDENTITY)
@@ -41,10 +41,10 @@ public class asset {
 
     @ManyToOne
     @JoinColumn(name = "asset_type_id")
-    private assetType assetType_id;
+    private AssetType assetType_id;
 
     @ManyToOne
     @JoinColumn(name = "department_id")
-    private department department_id;
+    private Department department_id;
 
 }

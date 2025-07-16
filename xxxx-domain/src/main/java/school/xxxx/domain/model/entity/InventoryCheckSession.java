@@ -10,7 +10,7 @@ import java.util.Date;
 @Entity
 @Table(name = "inventory_check_session")
 // Table kiem ke tai san
-public class inventoryCheckSession {
+public class InventoryCheckSession {
 
     @Id
     @GeneratedValue(strategy = jakarta.persistence.GenerationType.IDENTITY)

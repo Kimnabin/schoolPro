@@ -41,13 +41,12 @@ public class User {
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
-    @ManyToOne
+    // User.java - Thêm lazy loading và cascade options
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "department_id")
-    private department department;
+    private Department department;
 
-
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "role_id")
-    private role role;
-
+    private Role role;
 }
