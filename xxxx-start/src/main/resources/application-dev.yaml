@@ -1,27 +1,196 @@
-server:
-  port: 1122
+# Enhanced Production Configuration
+      server:
+        port: 8080
+        servlet:
+          context-path: /api
+        tomcat:
+          max-threads: 200
+          min-spare-threads: 10
+          max-connections: 8192
+          accept-count: 100
+          connection-timeout: 20000
 
-spring:
-  application:
-    name: assetSchool.con
+      spring:
+        application:
+          name: school-asset-management
 
-  datasource:
-    url: jdbc:mysql://localhost:33006/school_db
-    username: root
-    password: root
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    type: com.zaxxer.hikari.HikariDataSource
+        profiles:
+          active: prod
 
-    hikari:
-      maximum-pool-size: 10   # Số lượng tối đa kết nối
-      minimum-idle: 5         # Số lượng kết nối tối thiểu trong pool
+        # Database Configuration
+        datasource:
+          url: jdbc:mysql://localhost:33006/school_db?useUnicode=true&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh
+          username: ${DB_USERNAME:root}
+          password: ${DB_PASSWORD:root}
+          driver-class-name: com.mysql.cj.jdbc.Driver
+          type: com.zaxxer.hikari.HikariDataSource
 
-  jpa:
-    database: mysql
-    show-sql: true
-    hibernate:
-      ddl-auto: update
-    properties:
-      hibernate:
-        format_sql: true
-        use_sql_comments: true
+          hikari:
+            pool-name: SchoolHikariPool
+            maximum-pool-size: 20
+            minimum-idle: 5
+            idle-timeout: 300000
+            max-lifetime: 1200000
+            connection-timeout: 20000
+            validation-timeout: 3000
+            leak-detection-threshold: 60000
+            connection-test-query: SELECT 1
+
+        # JPA Configuration
+        jpa:
+          database: mysql
+          database-platform: org.hibernate.dialect.MySQL8Dialect
+          show-sql: false
+          hibernate:
+            ddl-auto: validate
+            naming:
+              physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+              implicit-strategy: org.hibernate.boot.model.naming.ImplicitNamingStrategyLegacyJpaImpl
+          properties:
+            hibernate:
+              format_sql: true
+              use_sql_comments: false
+              jdbc:
+                batch_size: 25
+                order_inserts: true
+                order_updates: true
+              cache:
+                use_second_level_cache: true
+                use_query_cache: true
+                region:
+                  factory_class: org.hibernate.cache.redis.RedisRegionFactory
+              search:
+                default:
+                  directory_provider: filesystem
+
+        # Redis Configuration (fixed)
+        data:
+          redis:
+            host: ${REDIS_HOST:localhost}
+            port: ${REDIS_PORT:6379}
+            password: ${REDIS_PASSWORD:}
+            database: 0
+            timeout: 2000ms
+            lettuce:
+              pool:
+                max-active: 8
+                max-idle: 8
+                min-idle: 0
+                max-wait: -1ms
+              shutdown-timeout: 100ms
+
+        # Cache Configuration
+        cache:
+          type: redis
+          redis:
+            cache-null-values: false
+            time-to-live: 1800000 # 30 minutes default
+
+        # Security Configuration
+        security:
+          user:
+            name: admin
+            password: ${ADMIN_PASSWORD:admin123}
+
+      # Application Specific Configuration
+      app:
+        security:
+          jwt:
+            secret: ${JWT_SECRET:mySecretKey123456789012345678901234567890}
+            expiration: ${JWT_EXPIRATION:86400} # 24 hours
+            refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800} # 7 days
+          max-login-attempts: ${MAX_LOGIN_ATTEMPTS:5}
+          account-lock-duration: ${ACCOUNT_LOCK_DURATION:PT30M}
+          password-expiry-days: ${PASSWORD_EXPIRY_DAYS:90}
+
+        business:
+          user:
+            min-username-length: 3
+            max-username-length: 50
+            default-role: USER
+            admin-emails: ${ADMIN_EMAILS:admin@school.com}
+
+          file:
+            upload-dir: ${FILE_UPLOAD_DIR:./uploads}
+            max-file-size: ${MAX_FILE_SIZE:10MB}
+            allowed-extensions: jpg,jpeg,png,pdf,doc,docx
+
+          pagination:
+            default-page-size: 10
+            max-page-size: 100
+
+      # Monitoring and Management
+      management:
+        endpoints:
+          web:
+            exposure:
+              include: health,info,metrics,prometheus,env,configprops
+            base-path: /actuator
+        endpoint:
+          health:
+            show-details: always
+            show-components: always
+          info:
+            enabled: true
+        info:
+          env:
+            enabled: true
+          java:
+            enabled: true
+          os:
+            enabled: true
+        metrics:
+          export:
+            prometheus: true
+            step: 60s
+          distribution:
+            percentiles-histogram:
+              http.server.requests: true
+            percentiles:
+              http.server.requests: 0.5, 0.75, 0.95, 0.99
+            slo:
+              http.server.requests: 10ms, 50ms, 100ms, 200ms, 500ms
+
+      # Logging Configuration
+      logging:
+        level:
+          root: INFO
+          school.xxxx: DEBUG
+          org.springframework.security: WARN
+          org.springframework.web: INFO
+          org.hibernate.SQL: DEBUG
+          org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+          com.zaxxer.hikari: INFO
+        pattern:
+          console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+          file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+        file:
+          name: logs/school-management.log
+          max-size: 100MB
+          max-history: 30
+
+      # Custom Properties for Business Logic
+      business:
+        rules:
+          user:
+            password:
+              min-length: 8
+              require-uppercase: true
+              require-lowercase: true
+              require-digit: true
+              require-special-char: true
+            session:
+              timeout-minutes: 30
+              max-concurrent-sessions: 3
+
+          asset:
+            default-depreciation-years: 5
+            maintenance-reminder-days: 30
+
+          notification:
+            email:
+              enabled: ${EMAIL_ENABLED:false}
+              smtp-host: ${SMTP_HOST:smtp.gmail.com}
+              smtp-port: ${SMTP_PORT:587}
+              username: ${SMTP_USERNAME:}
+              password: ${SMTP_PASSWORD:}
