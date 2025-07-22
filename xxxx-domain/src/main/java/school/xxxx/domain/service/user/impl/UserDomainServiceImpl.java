@@ -6,7 +6,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import school.xxxx.domain.exception.BusinessRuleViolationException;
 import school.xxxx.domain.exception.user.InvalidUserDataException;
@@ -20,8 +19,7 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Implementation của UserDomainService
- * Chứa business logic và rules cho User domain
+ * Implementation của UserDomainService - KHÔNG có PasswordEncoder để tránh circular dependency
  */
 @Service
 @RequiredArgsConstructor
@@ -30,15 +28,9 @@ import java.util.Optional;
 public class UserDomainServiceImpl implements UserDomainService {
 
     private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
+    // ❌ LOẠI BỎ: private final PasswordEncoder passwordEncoder; // Gây circular dependency
 
     // Configurable business rules
-    @Value("${app.security.max-login-attempts:5}")
-    private int maxLoginAttempts;
-
-    @Value("${app.security.password-expiry-days:90}")
-    private int passwordExpiryDays;
-
     @Value("${app.business.user.min-username-length:3}")
     private int minUsernameLength;
 
@@ -86,12 +78,7 @@ public class UserDomainServiceImpl implements UserDomainService {
         // Business rule: Default values
         applyDefaultValues(user);
 
-        // Security: Hash password
-        if (user.getPassword() != null) {
-            user.setPassword(passwordEncoder.encode(user.getPassword()));
-            user.updatePasswordChangedAt();
-        }
-
+        // ✅ PASSWORD ĐÃ ĐƯỢC HASH Ở APPLICATION LAYER (UserMapper)
         log.info("Creating new user: {}", user.getUsername());
         User savedUser = userRepository.save(user);
 
@@ -156,115 +143,10 @@ public class UserDomainServiceImpl implements UserDomainService {
         return userRepository.existsById(id);
     }
 
-    @Override
-    public User authenticateUser(String usernameOrEmail, String password) {
-        User user = findUserByUsernameOrEmail(usernameOrEmail);
+    // ❌ LOẠI BỎ CÁC METHOD CẦN PASSWORD ENCODER
+    // authenticateUser, changePassword, resetPassword sẽ được chuyển sang Application Layer
 
-        // Business rule: Check if account is locked
-        if (user.getAccountLocked()) {
-            throw new BusinessRuleViolationException(
-                    "Account is locked due to multiple failed login attempts",
-                    "authentication"
-            );
-        }
-
-        // Business rule: Check if account is active
-        if (!user.isActive()) {
-            throw new BusinessRuleViolationException(
-                    "Account is inactive",
-                    "authentication"
-            );
-        }
-
-        // Verify password
-        if (!passwordEncoder.matches(password, user.getPassword())) {
-            handleFailedLogin(user);
-            throw new BusinessRuleViolationException(
-                    "Invalid credentials",
-                    "authentication"
-            );
-        }
-
-        // Business rule: Check password expiry
-        if (user.isPasswordExpired(passwordExpiryDays)) {
-            throw new BusinessRuleViolationException(
-                    "Password has expired and must be changed",
-                    "password-expired"
-            );
-        }
-
-        // Update successful login
-        user.updateLastLogin();
-        userRepository.save(user);
-
-        log.info("User authenticated successfully: {}", user.getUsername());
-        return user;
-    }
-
-    @Override
-    public void changePassword(Long userId, String currentPassword, String newPassword) {
-        User user = getUserById(userId);
-
-        // Verify current password
-        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
-            throw new BusinessRuleViolationException(
-                    "Current password is incorrect",
-                    "password-change"
-            );
-        }
-
-        // Business rule: Password should be different from current
-        if (passwordEncoder.matches(newPassword, user.getPassword())) {
-            throw new BusinessRuleViolationException(
-                    "New password must be different from current password",
-                    "password-change"
-            );
-        }
-
-        // Validate new password strength
-        validatePasswordStrength(newPassword);
-
-        user.setPassword(passwordEncoder.encode(newPassword));
-        user.updatePasswordChangedAt();
-        user.unlockAccount(); // Reset failed attempts on password change
-
-        userRepository.save(user);
-        log.info("Password changed for user: {}", user.getUsername());
-    }
-
-    @Override
-    public void resetPassword(Long userId, String newPassword) {
-        User user = getUserById(userId);
-
-        validatePasswordStrength(newPassword);
-
-        user.setPassword(passwordEncoder.encode(newPassword));
-        user.updatePasswordChangedAt();
-        user.unlockAccount();
-
-        userRepository.save(user);
-        log.info("Password reset for user: {}", user.getUsername());
-    }
-
-    @Override
-    public void lockAccount(Long userId, String reason) {
-        User user = getUserById(userId);
-        user.lockAccount();
-
-        userRepository.save(user);
-        log.warn("Account locked for user: {} - Reason: {}", user.getUsername(), reason);
-    }
-
-    @Override
-    public void unlockAccount(Long userId) {
-        User user = getUserById(userId);
-        user.unlockAccount();
-
-        userRepository.save(user);
-        log.info("Account unlocked for user: {}", user.getUsername());
-    }
-
-    // Private validation methods
+    // Private validation methods (giữ nguyên)
     private void validateUserForCreation(User user) {
         if (user == null) {
             throw new InvalidUserDataException("User cannot be null");
@@ -272,7 +154,7 @@ public class UserDomainServiceImpl implements UserDomainService {
 
         validateUsername(user.getUsername());
         validateEmail(user.getEmail());
-        validatePasswordStrength(user.getPassword());
+        // ❌ LOẠI BỎ: validatePasswordStrength(user.getPassword());
 
         if (user.getFullName() == null || user.getFullName().trim().isEmpty()) {
             throw new InvalidUserDataException("fullName", "cannot be null or empty");
@@ -314,22 +196,6 @@ public class UserDomainServiceImpl implements UserDomainService {
         String emailRegex = "^[A-Za-z0-9+_.-]+@([A-Za-z0-9.-]+\\.[A-Za-z]{2,})$";
         if (!email.trim().matches(emailRegex)) {
             throw new InvalidUserDataException("email", "format is invalid");
-        }
-    }
-
-    private void validatePasswordStrength(String password) {
-        if (password == null || password.length() < 8) {
-            throw new InvalidUserDataException("password", "must be at least 8 characters long");
-        }
-
-        boolean hasUpper = password.chars().anyMatch(Character::isUpperCase);
-        boolean hasLower = password.chars().anyMatch(Character::isLowerCase);
-        boolean hasDigit = password.chars().anyMatch(Character::isDigit);
-        boolean hasSpecial = password.chars().anyMatch(ch -> "!@#$%^&*()_+-=[]{}|;:,.<>?".indexOf(ch) >= 0);
-
-        if (!(hasUpper && hasLower && hasDigit && hasSpecial)) {
-            throw new InvalidUserDataException("password",
-                    "must contain at least one uppercase letter, one lowercase letter, one digit, and one special character");
         }
     }
 
@@ -375,29 +241,7 @@ public class UserDomainServiceImpl implements UserDomainService {
         }
     }
 
-    private User findUserByUsernameOrEmail(String usernameOrEmail) {
-        // Try to find by username first
-        Optional<User> user = userRepository.findActiveByUsername(usernameOrEmail);
-        if (user.isPresent()) {
-            return user.get();
-        }
-
-        // Try to find by email
-        return userRepository.findActiveByEmail(usernameOrEmail)
-                .orElseThrow(() -> new UserNotFoundException("username or email", usernameOrEmail));
-    }
-
-    private void handleFailedLogin(User user) {
-        user.incrementFailedLoginAttempts();
-        userRepository.save(user);
-
-        if (user.getAccountLocked()) {
-            log.warn("Account locked due to too many failed login attempts: {}", user.getUsername());
-        }
-    }
-
     private String getCurrentUsername() {
-        // In a real application, this would get the current user from SecurityContext
         return "SYSTEM"; // Placeholder
     }
 }

@@ -1,3 +1,4 @@
+// xxxx-infrastructure/src/main/java/school/xxxx/infrastructure/config/RedisCacheConfig.java
 package school.xxxx.infrastructure.config;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
@@ -6,15 +7,16 @@ import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import org.springframework.beans.factory.annotation.Value;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
-import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
@@ -25,45 +27,21 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Redis Cache Configuration for performance optimization
- *
- * @author Senior Backend Developer
+ * Redis Cache Configuration - hoạt động với Redis không password
  */
 @Configuration
 @EnableCaching
+@ConditionalOnProperty(value = "spring.cache.type", havingValue = "redis") // ✅ Chỉ active khi cache type = redis
+@Slf4j
 public class RedisCacheConfig {
-
-    @Value("${spring.redis.host:localhost}")
-    private String redisHost;
-
-    @Value("${spring.redis.port:6379}")
-    private int redisPort;
-
-    @Value("${spring.redis.password:}")
-    private String redisPassword;
-
-    @Value("${spring.redis.database:0}")
-    private int redisDatabase;
-
-    /**
-     * Redis Connection Factory Configuration
-     */
-    @Bean
-    public RedisConnectionFactory redisConnectionFactory() {
-        LettuceConnectionFactory factory = new LettuceConnectionFactory(redisHost, redisPort);
-        factory.setDatabase(redisDatabase);
-        if (!redisPassword.isEmpty()) {
-            factory.setPassword(redisPassword);
-        }
-        factory.setValidateConnection(true);
-        return factory;
-    }
 
     /**
      * Redis Template for manual cache operations
      */
     @Bean
     public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {
+        log.info("🔧 Configuring Redis Template...");
+
         RedisTemplate<String, Object> template = new RedisTemplate<>();
         template.setConnectionFactory(connectionFactory);
 
@@ -79,14 +57,17 @@ public class RedisCacheConfig {
         template.setHashValueSerializer(serializer);
 
         template.afterPropertiesSet();
+        log.info("✅ Redis Template configured successfully!");
         return template;
     }
 
     /**
-     * Cache Manager with different TTL for different cache regions
+     * Cache Manager với different TTL cho different cache regions
      */
     @Bean
     public CacheManager cacheManager(RedisConnectionFactory connectionFactory) {
+        log.info("🔧 Configuring Redis Cache Manager...");
+
         RedisCacheConfiguration defaultConfig = createCacheConfiguration(Duration.ofMinutes(30));
 
         Map<String, RedisCacheConfiguration> cacheConfigurations = new HashMap<>();
@@ -109,15 +90,18 @@ public class RedisCacheConfig {
         // Security cache - 10 minutes TTL
         cacheConfigurations.put("security", createCacheConfiguration(Duration.ofMinutes(10)));
 
-        return RedisCacheManager.builder(connectionFactory)
+        RedisCacheManager cacheManager = RedisCacheManager.builder(connectionFactory)
                 .cacheDefaults(defaultConfig)
                 .withInitialCacheConfigurations(cacheConfigurations)
                 .transactionAware()
                 .build();
+
+        log.info("✅ Redis Cache Manager configured with {} cache regions", cacheConfigurations.size());
+        return cacheManager;
     }
 
     /**
-     * Create cache configuration with TTL and serialization
+     * Create cache configuration với TTL và serialization
      */
     private RedisCacheConfiguration createCacheConfiguration(Duration ttl) {
         Jackson2JsonRedisSerializer<Object> serializer = new Jackson2JsonRedisSerializer<>(Object.class);
@@ -133,7 +117,7 @@ public class RedisCacheConfig {
     }
 
     /**
-     * ObjectMapper for JSON serialization/deserialization
+     * ObjectMapper cho JSON serialization/deserialization
      */
     private ObjectMapper createObjectMapper() {
         ObjectMapper mapper = new ObjectMapper();
@@ -155,7 +139,7 @@ public class RedisCacheConfig {
     }
 
     /**
-     * Cache key generator for custom cache keys
+     * Cache key generator cho custom cache keys
      */
     @Bean("customKeyGenerator")
     public org.springframework.cache.interceptor.KeyGenerator keyGenerator() {

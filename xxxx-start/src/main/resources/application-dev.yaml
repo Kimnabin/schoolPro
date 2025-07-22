@@ -1,4 +1,4 @@
-# xxxx-start/src/main/resources/application-dev.yaml (Fixed Version)
+# xxxx-start/src/main/resources/application-dev.yaml
 server:
   port: 1122
   servlet:
@@ -24,7 +24,7 @@ spring:
 
   jpa:
     database: mysql
-    database-platform: org.hibernate.dialect.MySQL8Dialect
+    database-platform: org.hibernate.dialect.MySQLDialect
     show-sql: true
     hibernate:
       ddl-auto: update
@@ -35,17 +35,31 @@ spring:
         format_sql: true
         use_sql_comments: true
 
-  # Redis Configuration (Optional - comment out if not using Redis)
-  # data:
-  #   redis:
-  #     host: localhost
-  #     port: 6379
-  #     password:
-  #     database: 0
+  # ✅ REDIS CONFIGURATION (vì Redis container đã chạy không password)
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      database: 0
+      timeout: 2000ms
+      connect-timeout: 2000ms
 
-  # Cache Configuration
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+          max-wait: 2000ms
+        shutdown-timeout: 100ms
+
+  # ✅ CACHE CONFIGURATION với Redis
   cache:
-    type: simple # Use simple cache instead of redis for development
+    type: redis
+    redis:
+      cache-null-values: false
+      time-to-live: 1800000 # 30 minutes
+      key-prefix: "school:cache:"
+      use-key-prefix: true
 
 # JWT Configuration
 app:
@@ -67,7 +81,8 @@ logging:
   level:
     root: INFO
     school.xxxx: DEBUG
-    org.springframework.security: DEBUG
+    org.springframework.security: WARN
+    org.springframework.data.redis: DEBUG
     org.hibernate.SQL: DEBUG
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
@@ -77,7 +92,9 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info,metrics,redis
   endpoint:
     health:
       show-details: always
+    redis:
+      enabled: true

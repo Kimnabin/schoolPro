@@ -5,7 +5,7 @@ import java.util.List;
 
 /**
  * Interface định nghĩa các nghiệp vụ liên quan đến User trong tầng Domain Service.
- * Đây là nơi tập trung xử lý logic nghiệp vụ trước khi gọi Repository thao tác dữ liệu.
+ * CHỈ chứa core business logic, KHÔNG chứa authentication logic
  */
 public interface UserDomainService {
 
@@ -59,28 +59,10 @@ public interface UserDomainService {
      */
     boolean existsById(Long id);
 
-    /**
-     * Authenticate user với username/email và password
-     */
-    User authenticateUser(String usernameOrEmail, String password);
-
-    /**
-     * Change user password với current password verification
-     */
-    void changePassword(Long userId, String currentPassword, String newPassword);
-
-    /**
-     * Reset user password (admin operation)
-     */
-    void resetPassword(Long userId, String newPassword);
-
-    /**
-     * Lock user account
-     */
-    void lockAccount(Long userId, String reason);
-
-    /**
-     * Unlock user account
-     */
-    void unlockAccount(Long userId);
+    // ❌ LOẠI BỎ authentication methods - chuyển sang AuthAppService:
+    // - authenticateUser
+    // - changePassword
+    // - resetPassword
+    // - lockAccount
+    // - unlockAccount
 }

@@ -1,3 +1,5 @@
+// 10. CẬP NHẬT AUTH CONTROLLER - DÙNG AUTH APP SERVICE
+// xxxx-controller/src/main/java/school/xxxx/controller/http/AuthController.java
 package school.xxxx.controller.http;
 
 import jakarta.validation.Valid;
@@ -16,7 +18,7 @@ import school.xxxx.application.model.dto.auth.request.RefreshTokenRequestDTO;
 import school.xxxx.application.model.dto.auth.request.ChangePasswordRequestDTO;
 import school.xxxx.application.model.dto.auth.response.AuthResponseDTO;
 import school.xxxx.application.model.dto.user.response.UserResponseDTO;
-import school.xxxx.application.service.auth.AuthService;
+import school.xxxx.application.service.auth.AuthAppService; // ✅ Dùng AuthAppService thay vì AuthService
 import school.xxxx.controller.model.enums.ResultCode;
 import school.xxxx.controller.model.enums.ResultUtil;
 import school.xxxx.controller.model.vo.ResultMessage;
@@ -29,8 +31,6 @@ import java.util.Map;
 
 /**
  * Authentication Controller for user login, logout, token refresh, etc.
- *
- * @author Senior Backend Developer
  */
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -40,11 +40,10 @@ public class AuthController {
 
     private final AuthenticationManager authenticationManager;
     private final JwtTokenProvider tokenProvider;
-    private final AuthService authService;
+    private final AuthAppService authAppService; // ✅ Dùng AuthAppService
 
     /**
      * User login endpoint
-     * POST /api/v1/auth/login
      */
     @PostMapping("/login")
     public ResponseEntity<ResultMessage<AuthResponseDTO>> login(@Valid @RequestBody LoginRequestDTO loginRequest) {
@@ -78,7 +77,7 @@ public class AuthController {
                     .build();
 
             // Update user last login
-            authService.updateLastLogin(userPrincipal.getId());
+            authAppService.updateLastLogin(userPrincipal.getId());
 
             log.info("User logged in successfully: {}", userPrincipal.getUsername());
             return ResponseEntity.ok(ResultUtil.zdata(authResponse));
@@ -96,7 +95,6 @@ public class AuthController {
 
     /**
      * Refresh token endpoint
-     * POST /api/v1/auth/refresh
      */
     @PostMapping("/refresh")
     public ResponseEntity<ResultMessage<AuthResponseDTO>> refreshToken(@Valid @RequestBody RefreshTokenRequestDTO refreshRequest) {
@@ -112,7 +110,7 @@ public class AuthController {
             String newAccessToken = tokenProvider.generateTokenFromUsername(username);
 
             // Get user details for response
-            UserResponseDTO user = authService.getUserByUsername(username);
+            UserResponseDTO user = authAppService.getUserByUsername(username);
 
             AuthResponseDTO authResponse = AuthResponseDTO.builder()
                     .accessToken(newAccessToken)
@@ -135,7 +133,6 @@ public class AuthController {
 
     /**
      * Get current user profile
-     * GET /api/v1/auth/me
      */
     @GetMapping("/me")
     public ResponseEntity<ResultMessage<UserResponseDTO>> getCurrentUser(Authentication authentication) {
@@ -146,7 +143,7 @@ public class AuthController {
             }
 
             UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
-            UserResponseDTO user = authService.getUserById(userPrincipal.getId());
+            UserResponseDTO user = authAppService.getUserById(userPrincipal.getId());
 
             return ResponseEntity.ok(ResultUtil.zdata(user));
 
@@ -159,7 +156,6 @@ public class AuthController {
 
     /**
      * Change password
-     * POST /api/v1/auth/change-password
      */
     @PostMapping("/change-password")
     public ResponseEntity<ResultMessage<String>> changePassword(
@@ -171,9 +167,15 @@ public class AuthController {
                         .body(ResultUtil.error(ResultCode.USER_AUTH_ERROR.code(), "Not authenticated"));
             }
 
+            // Check if passwords match
+            if (!changePasswordRequest.isPasswordMatch()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(ResultUtil.error(ResultCode.PARAMS_ERROR.code(), "New password and confirmation do not match"));
+            }
+
             UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
 
-            authService.changePassword(
+            authAppService.changePassword(
                     userPrincipal.getId(),
                     changePasswordRequest.getCurrentPassword(),
                     changePasswordRequest.getNewPassword()
@@ -192,7 +194,6 @@ public class AuthController {
 
     /**
      * Logout endpoint
-     * POST /api/v1/auth/logout
      */
     @PostMapping("/logout")
     public ResponseEntity<ResultMessage<String>> logout(Authentication authentication) {
@@ -200,11 +201,6 @@ public class AuthController {
             if (authentication != null && authentication.isAuthenticated()) {
                 UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
                 log.info("User logged out: {}", userPrincipal.getUsername());
-
-                // In a production system, you might want to:
-                // 1. Add the JWT to a blacklist
-                // 2. Clear any cached user sessions
-                // 3. Log the logout event
 
                 SecurityContextHolder.clearContext();
             }
@@ -220,7 +216,6 @@ public class AuthController {
 
     /**
      * Check token validity
-     * GET /api/v1/auth/validate
      */
     @GetMapping("/validate")
     public ResponseEntity<ResultMessage<Map<String, Object>>> validateToken(
@@ -250,29 +245,6 @@ public class AuthController {
             Map<String, Object> response = Map.of("valid", false, "message", "Token validation failed");
             return ResponseEntity.ok(ResultUtil.zdata(response));
         }
-    }
-
-    /**
-     * Get authentication info (useful for debugging)
-     * GET /api/v1/auth/info
-     */
-    @GetMapping("/info")
-    public ResponseEntity<ResultMessage<Map<String, Object>>> getAuthInfo(Authentication authentication) {
-        Map<String, Object> authInfo = new HashMap<>();
-
-        if (authentication != null && authentication.isAuthenticated()) {
-            UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
-
-            authInfo.put("authenticated", true);
-            authInfo.put("username", userPrincipal.getUsername());
-            authInfo.put("authorities", authentication.getAuthorities());
-            authInfo.put("accountNonLocked", userPrincipal.isAccountNonLocked());
-            authInfo.put("enabled", userPrincipal.isEnabled());
-        } else {
-            authInfo.put("authenticated", false);
-        }
-
-        return ResponseEntity.ok(ResultUtil.zdata(authInfo));
     }
 
     /**

@@ -14,7 +14,7 @@ import school.xxxx.domain.model.entity.User;
 @RequiredArgsConstructor
 public class UserMapper {
 
-    private final PasswordEncoder passwordEncoder;
+    private final PasswordEncoder passwordEncoder; // ✅ Inject PasswordEncoder ở Application Layer
 
     /**
      * Chuyển đổi DTO tạo mới thành Entity User
@@ -30,8 +30,10 @@ public class UserMapper {
             user.setUsername(dto.getUsername().trim());
         }
 
+        // ✅ HASH PASSWORD Ở APPLICATION LAYER
         if (StringUtils.hasText(dto.getPassword())) {
             user.setPassword(passwordEncoder.encode(dto.getPassword()));
+            user.updatePasswordChangedAt(); // Set password changed timestamp
         }
 
         if (StringUtils.hasText(dto.getFullName())) {
@@ -43,7 +45,6 @@ public class UserMapper {
         }
 
         user.setState(dto.getState());
-
 
         if (StringUtils.hasText(dto.getPhoneNumber())) {
             String normalizedPhone = PhoneNumberUtil.normalizePhoneNumber(dto.getPhoneNumber());
@@ -72,7 +73,6 @@ public class UserMapper {
         if (StringUtils.hasText(dto.getEmail())) {
             user.setEmail(dto.getEmail().trim().toLowerCase());
         }
-
 
         if (StringUtils.hasText(dto.getPhoneNumber())) {
             String normalizedPhone = PhoneNumberUtil.normalizePhoneNumber(dto.getPhoneNumber());
